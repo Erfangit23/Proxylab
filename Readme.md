@@ -242,7 +242,7 @@ See [LICENSE](LICENSE) for the full text.
 If this project helped you, please consider:
 
 - ⭐ **Starring** the repository on GitHub
-- 🐛 **Reporting** bugs or requesting features via [Issues](https://github.com/Erfangit23/proxy-checker/issues)
+- 🐛 **Reporting** bugs or requesting features via [Issues](https://github.com/Erfangit23/proxylab/issues)
 - 🔄 **Sharing** with others who might find it useful
 - ☕ **Contributing** code or ideas via Pull Requests
 
