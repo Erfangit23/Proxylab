@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ProxyLab — Auto Proxy Checker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300;12..96,400;12..96,600;12..96,800&family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #08090d;
+    --bg-1: #0d1117;
+    --bg-2: #121821;
+    --surface: rgba(255, 255, 255, 0.03);
+    --surface-2: rgba(255, 255, 255, 0.06);
+    --border: rgba(255, 255, 255, 0.08);
+    --border-bright: rgba(255, 255, 255, 0.15);
+    --text: #e6edf3;
+    --text-dim: #8b949e;
+    --text-faint: #484f58;
+    --cyan: #22d3ee;
+    --cyan-dim: #0891b2;
+    --green: #3fb950;
+    --red: #f85149;
+    --amber: #d29922;
+    --purple: #bc8cff;
+    --radius: 10px;
+    --font: "Bricolage Grotesque", sans-serif;
+    --mono: "JetBrains Mono", monospace;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 14px;
+  }
+
+  /* ── Background atmosphere ── */
+  body::before {
+    content: "";
+    position: fixed; inset: 0;
+    background:
+      radial-gradient(ellipse 80% 50% at 20% 0%, rgba(34, 211, 238, 0.08), transparent),
+      radial-gradient(ellipse 60% 50% at 80% 100%, rgba(188, 140, 255, 0.06), transparent);
+    pointer-events: none; z-index: 0;
+  }
+  body::after {
+    content: "";
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none; z-index: 0;
+  }
+
+  /* ── Layout ── */
+  .app {
+    position: relative; z-index: 1;
+    display: grid;
+    grid-template-columns: 420px 1fr;
+    height: 100vh;
+    gap: 0;
+  }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    background: var(--bg-1);
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+
+  .brand {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 12px;
+  }
+  .brand-icon {
+    width: 36px; height: 36px;
+    background: url('icons/logo.png') center/cover, linear-gradient(135deg, var(--cyan), var(--purple));
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 18px; color: #000;
+    box-shadow: 0 0 20px rgba(34, 211, 238, 0.3);
+    background-size: cover;
+    background-position: center;
+  }
+  .brand-text h1 {
+    font-size: 18px; font-weight: 800; letter-spacing: -0.02em;
+  }
+  .brand-text p {
+    font-size: 11px; color: var(--text-dim); font-family: var(--mono); letter-spacing: 0.05em;
+  }
+  .brand-credit {
+    font-size: 9px; color: var(--text-faint); font-family: var(--mono);
+    margin-top: 2px; letter-spacing: 0.05em;
+  }
+  .brand-right {
+    margin-left: auto;
+    display: flex; flex-direction: column; align-items: flex-end; gap: 3px;
+  }
+  .github-btn {
+    display: flex; align-items: center; gap: 6px;
+    padding: 6px 12px;
+    border-radius: 8px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 12px; font-weight: 600; font-family: var(--font);
+    text-decoration: none;
+    transition: all 0.15s;
+    cursor: pointer;
+  }
+  .github-btn:hover {
+    color: var(--text);
+    border-color: var(--border-bright);
+    background: rgba(255,255,255,0.08);
+  }
+  .github-btn img {
+    width: 16px; height: 16px;
+  }
+
+  .input-section {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .section-label {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.15em;
+    color: var(--text-faint); font-weight: 600; margin-bottom: 10px;
+    font-family: var(--mono);
+  }
+
+  .drop-zone {
+    border: 1.5px dashed var(--border-bright);
+    border-radius: var(--radius);
+    padding: 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--surface);
+  }
+  .drop-zone:hover, .drop-zone.dragging {
+    border-color: var(--cyan);
+    background: rgba(34, 211, 238, 0.05);
+  }
+  .drop-zone-icon { font-size: 22px; margin-bottom: 6px; }
+  .drop-zone-text { font-size: 12px; color: var(--text-dim); }
+  .drop-zone-text strong { color: var(--cyan); }
+
+  .proxy-textarea {
+    width: 100%;
+    height: 180px;
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 12px 14px;
+    resize: vertical;
+    margin-top: 12px;
+    transition: border-color 0.2s;
+    line-height: 1.6;
+  }
+  .proxy-textarea:focus {
+    outline: none; border-color: var(--cyan);
+    box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.1);
+  }
+  .proxy-textarea::placeholder { color: var(--text-faint); }
+
+  .settings {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 14px;
+  }
+  .setting {
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .setting label {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--text-faint); font-family: var(--mono);
+  }
+  .setting input {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 8px 10px;
+    width: 100%;
+  }
+  .setting input:focus { outline: none; border-color: var(--cyan); }
+
+  .btn-row { display: flex; gap: 10px; margin-top: 16px; }
+
+  .btn {
+    flex: 1;
+    padding: 12px 16px;
+    border: none;
+    border-radius: var(--radius);
+    font-family: var(--font);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--cyan), #06b6d4);
+    color: #000;
+    box-shadow: 0 0 20px rgba(34, 211, 238, 0.2);
+  }
+  .btn-primary:hover { box-shadow: 0 0 30px rgba(34, 211, 238, 0.4); transform: translateY(-1px); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+  .btn-ghost {
+    background: var(--surface-2);
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+  }
+  .btn-ghost:hover { color: var(--text); border-color: var(--border-bright); }
+  .btn-ghost:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ── Stats bar ── */
+  .stats-bar {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .stat {
+    background: var(--bg-1);
+    padding: 14px 16px;
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .stat-value {
+    font-family: var(--mono);
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .stat-label {
+    font-size: 9px; text-transform: uppercase; letter-spacing: 0.12em;
+    color: var(--text-faint); font-weight: 600;
+  }
+  .stat-total .stat-value { color: var(--text); }
+  .stat-alive .stat-value { color: var(--green); }
+  .stat-dead .stat-value { color: var(--red); }
+  .stat-speed .stat-value { color: var(--cyan); }
+
+  /* ── Progress ── */
+  .progress-track {
+    height: 3px;
+    background: var(--bg-2);
+    flex-shrink: 0;
+    position: relative;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--cyan), var(--purple));
+    width: 0%;
+    transition: width 0.3s ease;
+    box-shadow: 0 0 10px rgba(34, 211, 238, 0.5);
+  }
+
+  /* ── Results panel ── */
+  .results-panel {
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    background: var(--bg);
+  }
+
+  .toolbar {
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 12px;
+    flex-shrink: 0;
+  }
+
+  .search-box {
+    flex: 1;
+    position: relative;
+  }
+  .search-box input {
+    width: 100%;
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 9px 12px 9px 34px;
+  }
+  .search-box input:focus { outline: none; border-color: var(--cyan); }
+  .search-box::before {
+    content: "⌕";
+    position: absolute; left: 11px; top: 50%; transform: translateY(-50%);
+    color: var(--text-faint); font-size: 15px;
+  }
+
+  .filter-chips { display: flex; gap: 6px; }
+  .chip {
+    padding: 6px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-dim);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: var(--mono);
+    user-select: none;
+  }
+  .chip:hover { border-color: var(--border-bright); color: var(--text); }
+  .chip.active { background: var(--cyan); color: #000; border-color: var(--cyan); }
+  .chip.active.green { background: var(--green); border-color: var(--green); }
+  .chip.active.red { background: var(--red); border-color: var(--red); }
+
+  .sort-select {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-dim);
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 8px 10px;
+    cursor: pointer;
+  }
+  .sort-select:focus { outline: none; border-color: var(--cyan); }
+
+  /* ── Table ── */
+  .table-wrap {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+  .table-wrap::-webkit-scrollbar { width: 6px; }
+  .table-wrap::-webkit-scrollbar-track { background: transparent; }
+  .table-wrap::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 3px; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  thead {
+    position: sticky; top: 0;
+    background: var(--bg-1);
+    z-index: 2;
+  }
+  thead th {
+    text-align: left;
+    padding: 10px 16px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-faint);
+    font-weight: 600;
+    font-family: var(--mono);
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+
+  tbody tr {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    transition: background 0.1s;
+    animation: rowIn 0.3s ease;
+  }
+  @keyframes rowIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  tbody tr:hover { background: var(--surface); }
+
+  td {
+    padding: 10px 16px;
+    font-family: var(--mono);
+    color: var(--text);
+    white-space: nowrap;
+  }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .badge-alive { background: rgba(63, 185, 80, 0.12); color: var(--green); }
+  .badge-dead { background: rgba(248, 81, 73, 0.12); color: var(--red); }
+  .badge-pending { background: rgba(210, 153, 34, 0.12); color: var(--amber); }
+
+  .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    display: inline-block;
+  }
+  .dot-alive { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .dot-dead { background: var(--red); }
+  .dot-pending { background: var(--amber); animation: pulse 1s infinite; }
+  @keyframes pulse { 50% { opacity: 0.3; } }
+
+  .latency-bar {
+    display: inline-block;
+    width: 60px;
+    height: 4px;
+    background: var(--bg-2);
+    border-radius: 2px;
+    overflow: hidden;
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+  .latency-fill {
+    height: 100%;
+    border-radius: 2px;
+  }
+
+  .country-flag {
+    font-size: 16px; line-height: 1;
+  }
+
+  /* ── Empty state ── */
+  .empty {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    height: 100%; gap: 16px; color: var(--text-faint);
+  }
+  .empty-icon { font-size: 48px; opacity: 0.3; }
+  .empty-text { font-size: 14px; }
+  .empty-hint { font-size: 11px; font-family: var(--mono); }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed; bottom: 20px; right: 20px;
+    background: var(--bg-2);
+    border: 1px solid var(--border-bright);
+    border-radius: 8px;
+    padding: 12px 18px;
+    font-size: 12px;
+    color: var(--text);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+    transform: translateY(100px); opacity: 0;
+    transition: all 0.3s;
+    z-index: 100;
+    font-family: var(--mono);
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 3px; }
+
+  /* ── Responsive ── */
+  @media (max-width: 900px) {
+    .app { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+    .sidebar { max-height: 50vh; }
+    .stats-bar { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- ── Sidebar ── -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-icon" style="background-image: url('icons/logo.png');"></div>
+      <div class="brand-text">
+        <h1>ProxyLab</h1>
+        <p>AUTO PROXY CHECKER v1.0</p>
+      </div>
+      <div class="brand-right">
+        <a class="github-btn" href="https://github.com/Erfangit23/" target="_blank" rel="noopener">
+          <img src="https://make-cxp-documentation.ams3.digitaloceanspaces.com/apps-center-icons/github.png" alt="GitHub">
+          GitHub
+        </a>
+        <span class="brand-credit">Created by Erfan Rahimi</span>
+      </div>
+    </div>
+
+    <div class="input-section">
+      <div class="section-label">▸ Input Sources</div>
+
+      <div class="drop-zone" id="dropZone">
+        <div class="drop-zone-icon">📄</div>
+        <div class="drop-zone-text">Drop <strong>.txt</strong> file or click to browse</div>
+        <input type="file" id="fileInput" accept=".txt,.csv,.lst" hidden>
+      </div>
+
+      <textarea class="proxy-textarea" id="proxyInput"
+        placeholder="Paste proxies here — one per line&#10;&#10;Supported formats:&#10;  127.0.0.1:8080&#10;  http://127.0.0.1:8080&#10;  socks5://user:pass@127.0.0.1:1080&#10;  127.0.0.1:8080:user:pass"></textarea>
+
+      <div class="settings">
+        <div class="setting">
+          <label>Concurrency</label>
+          <input type="number" id="concurrency" value="20" min="1" max="200">
+        </div>
+        <div class="setting">
+          <label>Timeout (ms)</label>
+          <input type="number" id="timeout" value="8000" min="1000" max="30000" step="500">
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-primary" id="startBtn">▶ Start Check</button>
+        <button class="btn btn-ghost" id="stopBtn" disabled>■ Stop</button>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-ghost" id="exportBtn" disabled>↓ Export Alive</button>
+        <button class="btn btn-ghost" id="clearBtn">✕ Clear</button>
+      </div>
+    </div>
+
+    <div class="stats-bar">
+      <div class="stat stat-total">
+        <div class="stat-value" id="statTotal">0</div>
+        <div class="stat-label">Total</div>
+      </div>
+      <div class="stat stat-alive">
+        <div class="stat-value" id="statAlive">0</div>
+        <div class="stat-label">Alive</div>
+      </div>
+      <div class="stat stat-dead">
+        <div class="stat-value" id="statDead">0</div>
+        <div class="stat-label">Dead</div>
+      </div>
+      <div class="stat stat-speed">
+        <div class="stat-value" id="statSpeed">0ms</div>
+        <div class="stat-label">Avg Latency</div>
+      </div>
+    </div>
+
+    <div class="progress-track">
+      <div class="progress-fill" id="progressFill"></div>
+    </div>
+  </aside>
+
+  <!-- ── Results ── -->
+  <main class="results-panel">
+    <div class="toolbar">
+      <div class="search-box">
+        <input type="text" id="searchInput" placeholder="Search by IP, host, country, ISP…">
+      </div>
+      <div class="filter-chips">
+        <div class="chip active" data-filter="all">All</div>
+        <div class="chip" data-filter="alive">Alive</div>
+        <div class="chip" data-filter="dead">Dead</div>
+      </div>
+      <select class="sort-select" id="sortSelect">
+        <option value="index">Sort: Order</option>
+        <option value="latency-asc">Sort: Latency ↑</option>
+        <option value="latency-desc">Sort: Latency ↓</option>
+        <option value="alive-first">Sort: Alive First</option>
+      </select>
+    </div>
+
+    <div class="table-wrap" id="tableWrap">
+      <div class="empty" id="emptyState">
+        <div class="empty-icon">🛰️</div>
+        <div class="empty-text">No proxies checked yet</div>
+        <div class="empty-hint">Paste proxies or load a file → hit Start</div>
+      </div>
+      <table id="resultsTable" style="display:none;">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Status</th>
+            <th>Proxy</th>
+            <th>Protocol</th>
+            <th>Latency</th>
+            <th>Anonymity</th>
+            <th>Country</th>
+            <th>ISP</th>
+            <th>IP</th>
+          </tr>
+        </thead>
+        <tbody id="resultsBody"></tbody>
+      </table>
+    </div>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const state = {
+  results: [],
+  filter: "all",
+  search: "",
+  sort: "index",
+  running: false,
+  abortCtrl: null,
+};
+
+// ── File handling ──
+const dropZone = $("dropZone");
+const fileInput = $("fileInput");
+
+dropZone.addEventListener("click", () => fileInput.click());
+fileInput.addEventListener("change", (e) => handleFile(e.target.files[0]));
+
+["dragover", "dragenter"].forEach(ev =>
+  dropZone.addEventListener(ev, (e) => { e.preventDefault(); dropZone.classList.add("dragging"); })
+);
+["dragleave", "drop"].forEach(ev =>
+  dropZone.addEventListener(ev, (e) => { e.preventDefault(); dropZone.classList.remove("dragging"); })
+);
+dropZone.addEventListener("drop", (e) => {
+  const f = e.dataTransfer.files[0];
+  if (f) handleFile(f);
+});
+
+function handleFile(file) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    $("proxyInput").value = e.target.result;
+    toast(`Loaded ${file.name} (${file.size.toLocaleString()} bytes)`);
+  };
+  reader.readAsText(file);
+}
+
+// ── Buttons ──
+$("startBtn").addEventListener("click", startCheck);
+$("stopBtn").addEventListener("click", stopCheck);
+$("clearBtn").addEventListener("click", clearAll);
+$("exportBtn").addEventListener("click", exportAlive);
+
+// ── Filters ──
+document.querySelectorAll(".chip").forEach(chip => {
+  chip.addEventListener("click", () => {
+    document.querySelectorAll(".chip").forEach(c => c.classList.remove("active", "green", "red"));
+    chip.classList.add("active");
+    if (chip.dataset.filter === "alive") chip.classList.add("green");
+    if (chip.dataset.filter === "dead") chip.classList.add("red");
+    state.filter = chip.dataset.filter;
+    renderTable();
+  });
+});
+
+$("searchInput").addEventListener("input", (e) => {
+  state.search = e.target.value.toLowerCase();
+  renderTable();
+});
+
+$("sortSelect").addEventListener("change", (e) => {
+  state.sort = e.target.value;
+  renderTable();
+});
+
+// ── Start checking ──
+async function startCheck() {
+  const text = $("proxyInput").value.trim();
+  if (!text) { toast("Paste proxies or load a file first"); return; }
+
+  state.results = [];
+  state.running = true;
+  $("startBtn").disabled = true;
+  $("stopBtn").disabled = false;
+  $("exportBtn").disabled = true;
+  $("emptyState").style.display = "none";
+  $("resultsTable").style.display = "table";
+  $("resultsBody").innerHTML = "";
+
+  updateStats({ total: 0, alive: 0, dead: 0, completed: 0, avgLatency: 0 });
+
+  try {
+    const resp = await fetch("/api/check", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        proxies: text,
+        concurrency: parseInt($("concurrency").value) || 20,
+        timeout: parseInt($("timeout").value) || 8000,
+      }),
+    });
+
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    while (state.running) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n\n");
+      buffer = lines.pop();
+      for (const line of lines) {
+        if (line.startsWith("data: ")) {
+          const data = JSON.parse(line.slice(6));
+          handleSSE(data);
+        }
+      }
+    }
+  } catch (e) {
+    if (e.name !== "AbortError") toast("Connection error: " + e.message);
+  }
+
+  state.running = false;
+  $("startBtn").disabled = false;
+  $("stopBtn").disabled = true;
+  const aliveCount = state.results.filter(r => r.result && r.result.alive).length;
+  if (aliveCount > 0) $("exportBtn").disabled = false;
+}
+
+function stopCheck() {
+  state.running = false;
+  toast("Checking stopped");
+}
+
+function handleSSE(data) {
+  if (data.type === "start") {
+    // All proxies arrive upfront — render every row as "pending"
+    state.results = data.proxies.map((p) => ({ index: p.index, proxy: p, result: null }));
+    updateStats({ total: data.total, alive: 0, dead: 0, completed: 0, avgLatency: 0 });
+    renderAllPending();
+  } else if (data.type === "result") {
+    // Update the existing pending row in-place
+    const entry = state.results[data.index];
+    if (entry) {
+      entry.result = data.result;
+      updateRow(data.index);
+    }
+    updateStatsFromResults();
+  } else if (data.type === "done") {
+    updateStatsFromResults();
+    toast(`Done — ${data.stats.alive} alive / ${data.stats.dead} dead out of ${data.stats.total}`);
+  }
+}
+
+// ── Table rendering ──
+
+/** Render ALL proxies as pending rows immediately on start. */
+function renderAllPending() {
+  const tbody = $("resultsBody");
+  tbody.innerHTML = "";
+  state.results.forEach((entry) => {
+    const tr = document.createElement("tr");
+    tr.dataset.index = entry.index;
+    tr.innerHTML = buildRowHTML(entry);
+    tbody.appendChild(tr);
+  });
+}
+
+/** Update a single row (by proxy index) after its check completes. */
+function updateRow(proxyIndex) {
+  const tr = $("resultsBody").querySelector(`tr[data-index="${proxyIndex}"]`);
+  if (!tr) return;
+  const entry = state.results[proxyIndex];
+  if (!entry) return;
+
+  // If the row doesn't pass current filter, remove it
+  if (!passesFilter(entry)) {
+    tr.remove();
+    return;
+  }
+  tr.innerHTML = buildRowHTML(entry);
+  sortAndReorder();
+}
+
+function buildRowHTML(entry) {
+  const { proxy, result } = entry;
+
+  // ── Pending state (not checked yet) ──
+  if (!result) {
+    return `
+      <td style="color:var(--text-faint)">${entry.index + 1}</td>
+      <td><span class="badge badge-pending"><span class="dot dot-pending"></span>Pending</span></td>
+      <td style="color:var(--text-dim)">${proxy.host}:${proxy.port}</td>
+      <td><span style="color:var(--purple);text-transform:uppercase;font-size:11px">${proxy.protocol}</span></td>
+      <td><span style="color:var(--text-faint)">—</span></td>
+      <td><span style="color:var(--text-faint)">—</span></td>
+      <td><span style="color:var(--text-faint)">—</span></td>
+      <td style="color:var(--text-faint)">—</span></td>
+      <td><span style="color:var(--text-faint)">—</span></td>
+    `;
+  }
+
+  // ── Completed (alive or dead) ──
+  const alive = result.alive;
+  const status = alive
+    ? `<span class="badge badge-alive"><span class="dot dot-alive"></span>Alive</span>`
+    : `<span class="badge badge-dead"><span class="dot dot-dead"></span>Dead</span>`;
+
+  const latency = alive ? result.latency : 0;
+  const latColor = latency < 500 ? "var(--green)" : latency < 2000 ? "var(--amber)" : "var(--red)";
+  const latPct = Math.min(100, (latency / 8000) * 100);
+  const latencyCell = alive
+    ? `<span class="latency-bar"><span class="latency-fill" style="width:${latPct}%;background:${latColor}"></span></span>${latency}ms`
+    : `<span style="color:var(--text-faint)">—</span>`;
+
+  const proto = `<span style="color:var(--purple);text-transform:uppercase;font-size:11px">${proxy.protocol}</span>`;
+  const anonymity = alive
+    ? `<span style="color:${result.anonymity === 'elite' ? 'var(--green)' : result.anonymity === 'anonymous' ? 'var(--cyan)' : 'var(--amber)'}">${result.anonymity}</span>`
+    : `<span style="color:var(--text-faint)">—</span>`;
+
+  const geo = result.geo;
+  const country = geo
+    ? `<span class="country-flag">${flagEmoji(geo.code)}</span> ${geo.country}`
+    : `<span style="color:var(--text-faint)">—</span>`;
+  const isp = geo ? geo.isp : `<span style="color:var(--text-faint)">—</span>`;
+  const ip = geo ? geo.ip : `<span style="color:var(--text-faint)">—</span>`;
+
+  return `
+    <td style="color:var(--text-faint)">${entry.index + 1}</td>
+    <td>${status}</td>
+    <td style="color:var(--text)">${proxy.host}:${proxy.port}</td>
+    <td>${proto}</td>
+    <td>${latencyCell}</td>
+    <td>${anonymity}</td>
+    <td>${country}</td>
+    <td style="color:var(--text-dim);max-width:180px;overflow:hidden;text-overflow:ellipsis">${isp}</td>
+    <td style="color:var(--text-dim)">${ip}</td>
+  `;
+}
+
+function passesFilter(entry) {
+  const result = entry.result;
+  if (state.filter === "alive" && !(result && result.alive)) return false;
+  if (state.filter === "dead" && !(result && !result.alive)) return false;
+  // For "all" filter, pending rows always pass
+  if (state.search) {
+    const s = state.search;
+    const proxy = entry.proxy.host + ":" + entry.proxy.port + " " + entry.proxy.protocol;
+    const geo = result?.geo;
+    const searchText = (proxy + " " + (geo?.country || "") + " " + (geo?.isp || "") + " " + (geo?.ip || "")).toLowerCase();
+    if (!searchText.includes(s)) return false;
+  }
+  return true;
+}
+
+function renderTable() {
+  const tbody = $("resultsBody");
+  tbody.innerHTML = "";
+  state.results.forEach((entry) => {
+    if (!passesFilter(entry)) return;
+    const tr = document.createElement("tr");
+    tr.dataset.index = entry.index;
+    tr.innerHTML = buildRowHTML(entry);
+    tbody.appendChild(tr);
+  });
+  sortAndReorder();
+}
+
+function sortAndReorder() {
+  const tbody = $("resultsBody");
+  const rows = Array.from(tbody.querySelectorAll("tr"));
+  if (rows.length === 0) return;
+
+  rows.sort((a, b) => {
+    const entryA = state.results[a.dataset.index];
+    const entryB = state.results[b.dataset.index];
+    if (!entryA || !entryB) return 0;
+
+    const rA = entryA.result;
+    const rB = entryB.result;
+
+    // Pending rows always sort to the bottom unless sorting by order
+    if (state.sort !== "index") {
+      if (!rA && rB) return 1;
+      if (rA && !rB) return -1;
+    }
+
+    switch (state.sort) {
+      case "latency-asc":
+        return (rA && rA.alive ? rA.latency : 99999) - (rB && rB.alive ? rB.latency : 99999);
+      case "latency-desc":
+        return (rB && rB.alive ? rB.latency : 0) - (rA && rA.alive ? rA.latency : 0);
+      case "alive-first":
+        return (rB && rB.alive ? 1 : 0) - (rA && rA.alive ? 1 : 0);
+      default:
+        return entryA.index - entryB.index;
+    }
+  });
+
+  rows.forEach(row => tbody.appendChild(row));
+}
+
+// ── Stats ──
+function updateStats(s) {
+  $("statTotal").textContent = s.total;
+  $("statAlive").textContent = s.alive;
+  $("statDead").textContent = s.dead;
+  $("statSpeed").textContent = s.avgLatency ? Math.round(s.avgLatency) + "ms" : "0ms";
+  const pct = s.total > 0 ? (s.completed / s.total) * 100 : 0;
+  $("progressFill").style.width = pct + "%";
+}
+
+function updateStatsFromResults() {
+  const total = state.results.length;
+  const checked = state.results.filter(r => r.result);
+  const alive = checked.filter(r => r.result.alive).length;
+  const dead = checked.length - alive;
+  const aliveResults = checked.filter(r => r.result.alive);
+  const avgLatency = aliveResults.length > 0
+    ? aliveResults.reduce((sum, r) => sum + r.result.latency, 0) / aliveResults.length
+    : 0;
+  updateStats({ total, alive, dead, completed: checked.length, avgLatency });
+}
+
+// ── Export ──
+function exportAlive() {
+  const alive = state.results.filter(r => r.result && r.result.alive);
+  if (alive.length === 0) { toast("No alive proxies to export"); return; }
+  const lines = alive.map(r => r.proxy.raw);
+  const blob = new Blob([lines.join("\n")], { type: "text/plain" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `alive-proxies-${Date.now()}.txt`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast(`Exported ${alive.length} alive proxies`);
+}
+
+// ── Clear ──
+function clearAll() {
+  state.results = [];
+  state.running = false;
+  $("proxyInput").value = "";
+  $("resultsBody").innerHTML = "";
+  $("emptyState").style.display = "flex";
+  $("resultsTable").style.display = "none";
+  $("exportBtn").disabled = true;
+  updateStats({ total: 0, alive: 0, dead: 0, completed: 0, avgLatency: 0 });
+}
+
+// ── Helpers ──
+function flagEmoji(countryCode) {
+  if (!countryCode || countryCode.length !== 2) return "🏳️";
+  const codePoints = countryCode.toUpperCase().split("").map(c => 0x1F1E6 + c.charCodeAt(0) - 65);
+  return String.fromCodePoint(...codePoints);
+}
+
+let toastTimer;
+function toast(msg) {
+  const t = $("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove("show"), 3000);
+}
+</script>
+</body>
+</html>
